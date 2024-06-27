@@ -1,3 +1,0 @@
-db = u411752151_eboto
-user = u411752151_root
-pw= 2K@e0iz4sV

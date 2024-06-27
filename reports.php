@@ -47,10 +47,10 @@
         </div>
       </div>
 
-      <div id="charts-container" class="mt-5">
-        <div>
-          <h5 class="text-center text-secondary">Sales</h5>
-          <canvas id="line-chart-result" class="mt-2"></canvas>
+      <div id="charts-container" class="col-md-9 mx-auto mt-2">
+        <div class="d-flex justify-content-center align-items-center flex-column">
+          <div class="spinner-border fs-4"></div>
+          <h6 class="mt-2">Loading...</h6>
         </div>
       </div>
         
@@ -66,126 +66,177 @@
   <script src="./libs/daterangepicker.min.js"></script>
   <script>
     $(document).ready(function(){
-
       $('#dates').daterangepicker({
         timePicker: true,
         startDate: moment().startOf('hour'),
         endDate: moment().startOf('day').add(7, 'day'),
       });
 
-      function fetchTransactCountsByDateRange() {
-        $.ajax({
-          url: 'action2.php',
-          method: 'post',
-          data: {
+      // let startDate = $('#dates').val().substr(0, 10)
+      // let endDate = $('#dates').val().substr(13)
+      // console.log(startDate)
+      // console.log(endDate)
+      // let startDate = '12/01/2023'
+      // let endDate = '01/18/2024'
+      let individualChart = []
+
+      async function fetchSales() {
+        let res = await fetch('assets/php/action2.php', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
             startDate: $('#dates').val().substr(0, 10),
             endDate: $('#dates').val().substr(13),
-            action: 'fetchTransactCountsByDateRange'
-          },
-          success: res => {
-            let { transactCounts, dates } = JSON.parse(res)
-
-            let dateLabels = transactCounts.map(transact => transact.enteredDate)
-            let dateData = transactCounts.map(transact => transact.transactCount)
-            let colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#e67e22']
-
-            const config = {
-              type: 'line',
-              data: {
-                labels: ['Mon', 'Tue', 'Wed'],
-                // labels: dateLabels,
-                datasets: [
-                  {
-                    label: 'Line Chart',
-                    data: [1, 2, 3],
-                    // data: dateData,
-                    fill: false,
-                    borderColor: '#e74c3c',
-                    tension: 0.1
-                  },
-                  {
-                    label: 'Line Chart 2',
-                    data: [3, 6, 7],
-                    // data: dateData,
-                    fill: false,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                  },
-                  {
-                    label: 'Line Chart 3',
-                    data: [8, 18, 19],
-                    // data: dateData,
-                    fill: false,
-                    borderColor: 'rgb(100, 100, 192)',
-                    tension: 0.1
-                  },
-                ]
-              }
-            }
-
-            let chartCon = document.querySelector('#line-chart-result')
-            let chart = new Chart(chartCon, config)
-
-            $('#dates').change(function() {
-              $.ajax({
-                url: 'action2.php',
-                method: 'post',
-                data: {
-                  startDate: $('#dates').val().substr(0, 10),
-                  endDate: $('#dates').val().substr(13),
-                  action: 'fetchTransactCountsByDateRange'
-                },
-                success: res2 => {
-                  let { transactCounts, dates } = JSON.parse(res2)
-
-                  let groupedTransacts = Object.groupBy(transactCounts, grTran => grTran.hisStatCode)
-                  console.log(groupedTransacts)
-                  
-                  let updatedDatasets = []
-                  let rgb = 10
-
-                  let indexFoIn = 0
-                  // Looping through grouped transactions
-                  for (key in groupedTransacts) {
-                    let data = []
-                    let datesOfTransaction = groupedTransacts[key].map(obj => obj.entered_date)
-                    let countsOfTransaction = groupedTransacts[key].map(obj => obj.lineNoCount)
-
-                    dates.forEach((date, i) => {
-                      if (datesOfTransaction.includes(date)) {
-                        let indexOfTransaction = datesOfTransaction.indexOf(date)
-                        data.push(countsOfTransaction[indexOfTransaction])
-                      } else {
-                        data.push(0)
-                      }
-                    })
-
-                    updatedDatasets.push({
-                      label: key,
-                      data,
-                      fill: false,
-                      borderColor: colors[indexFoIn],
-                      tension: 0.1
-                    })
-
-                    rgb += 30
-                    indexFoIn++
-                  }
-
-                  console.log(updatedDatasets)
- 
-                  chart.data.labels = dates
-                  chart.data.datasets = updatedDatasets
-                  chart.update()
-                }
-              })
-            })
-
-          }
+            action: 'fetchTransactCountsByDateRangeOfSales'
+          })
         })
+        res = await res.json()
+        return res
+      }
+      
+      async function fetchEngr() {
+        let res = await fetch('assets/php/action2.php', { 
+          method: 'POST',
+          headers: {
+            "Content-Type": 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            startDate: $('#dates').val().substr(0, 10),
+            endDate: $('#dates').val().substr(13),
+            action: 'fetchTransactCountsByDateRangeOfEngr'
+          })
+        })
+        res = await res.json()
+        return res
+      }
+      
+      async function fetchOper() {
+        let res = await fetch('assets/php/action2.php', { 
+          method: 'POST',
+          headers: {
+            "Content-Type": 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            startDate: $('#dates').val().substr(0, 10),
+            endDate: $('#dates').val().substr(13),
+            action: 'fetchTransactCountsByDateRangeOfOper'
+          })
+        })
+        res = await res.json()
+        return res
       }
 
+      async function fetchTransactCountsByDateRange() {
+        let [salesData, engrData, operData] = await Promise.all([fetchSales(), fetchEngr(), fetchOper()])
+        let depData = {}
+        let colors = ["#e74c3c", "#3498db", "#f1c40f", "#2ecc71", "#e67e22"];
+
+        depData.sales = salesData
+        depData.engr = engrData
+        depData.oper = operData
+
+        // console.log(depData)
+
+        $('#charts-container').html('')
+
+        for (dep in depData) {
+          $('#charts-container').append(`
+            <div id="${dep}-chart-container" class="mt-4">
+              <h5 class="text-center text-secondary">${dep}</h5>
+              <canvas id="${dep}-chart" class="mt-2"></canvas>
+            </div>
+          `)
+
+          let groupedTransacts = Object.groupBy(depData[dep].transactCounts, grTran => grTran.hisStatCode)
+          // console.log(groupedTransacts)
+
+          let datasets = [];
+          let indexFoIn = 0;
+
+          // Looping through grouped transactions
+          for (key in groupedTransacts) {
+            let data = [];
+            let datesOfTransaction = groupedTransacts[key].map(
+              (obj) => obj.entered_date
+            );
+            let countsOfTransaction = groupedTransacts[key].map(
+              (obj) => obj.lineNoCount
+            );
+
+            depData[dep].dates.forEach((date, i) => {
+              if (datesOfTransaction.includes(date)) {
+                let indexOfTransaction = datesOfTransaction.indexOf(date);
+                data.push(countsOfTransaction[indexOfTransaction]);
+              } else {
+                data.push(0);
+              }
+            });
+
+            datasets.push({
+              label: key,
+              data,
+              fill: false,
+              borderColor: colors[indexFoIn],
+              tension: 0.1,
+              pointRadius: 5,
+              pointHoverRadius: 9,
+            });
+
+            indexFoIn++;
+          }
+
+          const config = {
+            type: "line",
+            data: {
+              labels: depData[dep].dates,
+              datasets
+            },
+            // options: {
+            //   responsive: true,
+            //   interaction: {
+            //     mode: 'index',
+            //     intersect: false,
+            //   },
+            //   stacked: false,
+            //   plugins: {
+            //     title: {
+            //       display: true,
+            //       text: 'Chart.js Line Chart - Multi Axis'
+            //     }
+            //   },
+            //   scales: {
+            //     y: {
+            //       type: 'linear',
+            //       display: true,
+            //       position: 'left',
+            //     },
+            //     y1: {
+            //       type: 'linear',
+            //       display: true,
+            //       position: 'right',
+
+            //       // grid line settings
+            //       grid: {
+            //         drawOnChartArea: false, // only want the grid lines for one axis to show up
+            //       },
+            //     },
+            //   }
+            // },
+          };
+
+          let chartCon = document.querySelector(`#${dep}-chart`);
+          let myChart = new Chart(chartCon, config);
+          individualChart.push(myChart)
+        }
+      }
       fetchTransactCountsByDateRange()
+
+      // Change DateRange
+      $("#dates").change(async function () {
+        fetchTransactCountsByDateRange()
+      })
 
       // Change Departments
       $('#departments').change(function(e) {
@@ -223,7 +274,7 @@
 
         // Fetch Employees by Department AJAX Request
         $.ajax({
-          url: 'action.php',
+          url: 'assets/php/action.php',
           method: 'post',
           data: { 
             action: 'fetchEmplyByDep', 
